@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Listar Nomes{% endblock %}
+
+{% block content %}
+<h1>Lista de Nomes</h1>
+
+<form class="row g-3 mb-3" method="GET">
+  <div class="col-md-4">
+    <input type="text" name="nome" placeholder="Filtrar por nome" class="form-control" value="{{ filtro_nome }}">
+  </div>
+  <div class="col-md-4">
+    <input type="text" name="origem" placeholder="Filtrar por origem" class="form-control" value="{{ filtro_origem }}">
+  </div>
+  <div class="col-md-4">
+    <button type="submit" class="btn btn-primary">Filtrar</button>
+  </div>
+</form>
+
+{% if nomes %}
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Nome</th>
+      <th>Significado</th>
+      <th>Origem</th>
+      <th>Motivo</th>
+      <th>Pesquisas</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for id, nome, significado, origem, motivo, pesquisas in nomes %}
+    <tr>
+      <td>{{ id }}</td>
+      <td>{{ nome }}</td>
+      <td>{{ significado }}</td>
+      <td>{{ origem }}</td>
+      <td>{{ motivo }}</td>
+      <td>{{ pesquisas }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<nav>
+  <ul class="pagination">
+    {% for p in range(1, total_pages + 1) %}
+      <li class="page-item {% if p == page %}active{% endif %}">
+        <a class="page-link" href="?page={{p}}&nome={{filtro_nome}}&origem={{filtro_origem}}">{{p}}</a>
+      </li>
+    {% endfor %}
+  </ul>
+</nav>
+{% else %}
+<p>Nenhum nome encontrado.</p>
+{% endif %}
+{% endblock %}
