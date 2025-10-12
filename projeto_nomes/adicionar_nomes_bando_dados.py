@@ -1,12 +1,23 @@
 import sqlite3
-from db import init_db, get_connection
+import os
 
-# Inicializa a tabela (caso ainda não exista)
-init_db()
-
-# Lista de nomes de exemplo
-nomes = [
-    ("	Aarão	", "	Aharon, o elevado, o sublime	", "	Hebr aico	", "	Extraído de Livro dos Nomes	"),
+# -----------------------------------------------------------
+# PASSO 1: Importação da Lista de Nomes (CORREÇÃO ESSENCIAL)
+# 
+# ATENÇÃO: É necessário criar um arquivo chamado 'nomes_data.py' 
+# na mesma pasta e colocar a sua lista de tuplas lá dentro, 
+# definida como 'nomes = [...]'.
+# -----------------------------------------------------------
+try:
+    # Tenta importar a lista completa do arquivo de dados
+    from nomes_data import nomes
+    print("Sucesso: Lista de nomes carregada de 'nomes_data.py'.")
+except ImportError:
+    # Caso o arquivo não exista, usa uma lista de exemplo para evitar erro
+    print("AVISO: 'nomes_data.py' não encontrado. Usando lista de exemplo.")
+    nomes = [
+       
+("	Aarão	", "	Aharon, o elevado, o sublime	", "	Hebr aico	", "	Extraído de Livro dos Nomes	"),
 ("	Abá	", "	Esper ança	", "	Afro- brasileiro	", "	Extraído de Livro dos Nomes	"),
 ("	Abaçaí	", "	Homem de resp eito	", "	Tupi	", "	Extraído de Livro dos Nomes	"),
 ("	Abade	", "	Abba, pai, guia o u chefe de um  mosteiro. O pa i pela	", "	Hebr aico	", "	Extraído de Livro dos Nomes	"),
@@ -1201,11 +1212,11 @@ nomes = [
 ("	Cleon	", "	Fam a, glória	", "	Grego	", "	Extraído de Livro dos Nomes	"),
 ("	Cleonice	", "	V itória gloriosa	", "	Grego	", "	Extraído de Livro dos Nomes	"),
 ("	Cleônides	", "	Feiçã o que den uncia g lória	", "	Grego	", "	Extraído de Livro dos Nomes	"),
-("	Cleópatr a	", "	Cl eopatra, il ustre por seu pai, gl ória de seu p ai	", "	Grego	", "	Extraído de Livro dos Nomes	")
-# # ("	Cleoptólemo	", "	Kleoptó lemo: kléos: glória, e ptóle mos: guerra": "g uerra	", "	Grego	", "	Extraído de Livro dos Nomes	"),
-# ("	Cleto	", "	Chamado, eleito	", "	Grego	", "	Extraído de Livro dos Nomes	"),
-# ("	Cléver	", "	Taipeiro	", "	Germ ânico	", "	Extraído de Livro dos Nomes	"),
-# ("	Clície	", "	Famosa, célebre	", "	Grego	", "	Extraído de Livro dos Nomes	"),
+("	Cleópatr a	", "	Cl eopatra, il ustre por seu pai, gl ória de seu p ai	", "	Grego	", "	Extraído de Livro dos Nomes	"),
+# ("	Cleoptólemo	", "	Kleoptó lemo: kléos: glória, e ptóle mos: guerra": "g uerra	", "	Grego	", "	Extraído de Livro dos Nomes	"),
+("	Cleto	", "	Chamado, eleito	", "	Grego	", "	Extraído de Livro dos Nomes	"),
+("	Cléver	", "	Taipeiro	", "	Germ ânico	", "	Extraído de Livro dos Nomes	"),
+("	Clície	", "	Famosa, célebre	", "	Grego	", "	Extraído de Livro dos Nomes	"),
 # ("	Clíma co	", "	Escada do céu	", "	Grego	", "	Extraído de Livro dos Nomes	"),
 # ("	Clímene	", "	Clymen e, do gr ego Kl yméne,  célebre	", "	Lati m	", "	Extraído de Livro dos Nomes	"),
 # ("	Climênia	", "	Klymene, renovada	", "	Grego	", "	Extraído de Livro dos Nomes	"),
@@ -2553,23 +2564,105 @@ nomes = [
 # ("	Marcos	", "	protegid o de ma rte (o deus da gu erra)	", "	Marcus	", "	Extraído de Livro dos Nomes	")
 
     
-]
+    ]
+except NameError:
+    print("ERRO: A lista 'nomes' não foi definida no arquivo importado.")
+    nomes = [] # Evita o erro no laço 'for'
+
+
+# -----------------------------------------------------------
+# FUNÇÕES DE BANCO DE DADOS (Inclusão de 'db.py' para torná-lo executável)
+# -----------------------------------------------------------
+
+DB_NAME = 'nomes_projeto.db'
+
+def get_connection():
+    """Retorna uma conexão com o banco de dados SQLite."""
+    # Cria o banco de dados se ele não existir
+    return sqlite3.connect(DB_NAME)
+
+def init_db():
+    """Inicializa a tabela 'nomes' no banco de dados."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Execução da criação da tabela
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS nomes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL UNIQUE,
+            significado TEXT,
+            origem TEXT,
+            motivo_escolha TEXT,
+            pesquisas INTEGER DEFAULT 0
+        );
+    """)
+    
+    conn.commit()
+    conn.close()
+    print(f"Banco de dados '{DB_NAME}' inicializado.")
+
+
+# -----------------------------------------------------------
+# LÓGICA PRINCIPAL DO SCRIPT
+# -----------------------------------------------------------
+
+# Inicializa a tabela (caso ainda não exista)
+init_db()
 
 # Conecta ao banco
 conn = get_connection()
 cursor = conn.cursor()
 
-# Insere os nomes no banco
-for nome, significado, origem, motivo in nomes:
-    # Verifica se o nome já existe para não duplicar
-    cursor.execute("SELECT id FROM nomes WHERE nome = ?", (nome,))
-    if cursor.fetchone() is None:
-        cursor.execute("""
-            INSERT INTO nomes (nome, significado, origem, motivo_escolha, pesquisas)
-            VALUES (?, ?, ?, ?, 0)
-        """, (nome, significado, origem, motivo))
+print("Iniciando a inserção de nomes no banco de dados...")
+nomes_inseridos = 0
+nomes_ignorados = 0
 
+# Insere os nomes no banco
+# CORREÇÃO: Usando *significados_extras para lidar com tuplas de tamanho variável
+for item in nomes:
+    try:
+        # Desempacota a tupla. O *pega todos os elementos do meio como uma lista.
+        nome, *significados_extras, origem, motivo = item
+    except ValueError as e:
+        # Caso a tupla tenha menos de 4 elementos (ex: só 1 ou 2), ela será ignorada
+        print(f"AVISO: Tupla ignorada por formato inválido (menos de 4 campos): {item}")
+        nomes_ignorados += 1
+        continue # Passa para o próximo item
+        
+    # 1. Remonta o campo 'significado' (junta todos os elementos intermediários)
+    partes_significado = [str(s).strip() for s in significados_extras]
+    significado_completo = " ".join(partes_significado).strip()
+    
+    # 2. Prepara as variáveis finais (garantindo que não haja espaços em branco indesejados)
+    # Isso resolve o problema de nomes como " Abaré " que não eram encontrados na busca.
+    nome_final = nome.strip()
+    origem_final = origem.strip()
+    motivo_final = motivo.strip()
+
+    # 3. Verifica se o nome já existe para não duplicar (UNIQUE constraint)
+    cursor.execute("SELECT id FROM nomes WHERE nome = ?", (nome_final,))
+    if cursor.fetchone() is None:
+        try:
+            cursor.execute("""
+                INSERT INTO nomes (nome, significado, origem, motivo_escolha, pesquisas)
+                VALUES (?, ?, ?, ?, 0)
+            """, (nome_final, significado_completo, origem_final, motivo_final))
+            
+            nomes_inseridos += 1
+        except sqlite3.IntegrityError:
+            # Captura caso haja alguma falha de UNIQUE Constraint que o fetchone não pegou
+            print(f"AVISO: Nome '{nome_final}' já existia ou falha de integridade.")
+            nomes_ignorados += 1
+
+
+# Confirma as alterações no banco de dados
 conn.commit()
 conn.close()
 
+print("-" * 30)
 print("Banco populado com sucesso!")
+print(f"Total de {len(nomes)} itens processados.")
+print(f"Total de {nomes_inseridos} novos nomes inseridos.")
+print(f"Total de {nomes_ignorados} itens ignorados/duplicados.")
+print("-" * 30)

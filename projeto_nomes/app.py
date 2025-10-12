@@ -3,6 +3,7 @@ from db import init_db, get_connection
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
+import os
 
 app = Flask(__name__)
 
@@ -126,8 +127,20 @@ def buscar():
 # ============================
 @app.route("/estatisticas")
 def estatisticas():
+    # ----------------------------------------------------
+    # CORREÇÃO APLICADA AQUI: Garante que a pasta 'static' exista
+    # ATENÇÃO: É necessário ter 'import os' no topo do seu arquivo.
+    # ----------------------------------------------------
+    diretorio_static = 'static'
+    if not os.path.exists(diretorio_static):
+        os.makedirs(diretorio_static)
+    
+    # ----------------------------------------------------
+    # Extração de Dados
+    # ----------------------------------------------------
     conn = get_connection()
-    df = pd.read_sql_query("SELECT * FROM nomes", conn)
+    # Usando o parâmetro 'index_col' para evitar problemas, embora opcional
+    df = pd.read_sql_query("SELECT * FROM nomes", conn) 
     conn.close()
 
     if df.empty:
@@ -136,27 +149,46 @@ def estatisticas():
                                mais_comum="Nenhum",
                                origem_comum="Nenhuma")
 
+    # ----------------------------------------------------
+    # Cálculo das Estatísticas
+    # ----------------------------------------------------
     total = len(df)
-    mais_comum = df["nome"].mode()[0]
-    origem_comum = df["origem"].mode()[0] if df["origem"].notna().any() else "Nenhuma"
+    
+    # Usando .iloc[0] para .mode(), que é mais robusto que [0]
+    mais_comum = df["nome"].mode().iloc[0] if not df["nome"].empty else "Nenhum" 
+    
+    # O seu tratamento para origem_comum já é bom
+    origem_comum = df["origem"].mode().iloc[0] if df["origem"].notna().any() else "Nenhuma" 
 
-    # Gráfico 1: Top 5 nomes
+    # ----------------------------------------------------
+    # Gráfico 1: Top 5 nomes (Se a coluna 'nome' tiver nomes únicos, isso não é muito útil)
+    # Se você quiser saber os nomes mais pesquisados, use a coluna 'pesquisas'
+    # ----------------------------------------------------
     plt.figure(figsize=(6,4))
+    # ATENÇÃO: Você provavelmente deveria usar a coluna 'pesquisas' aqui se ela for relevante
+    # Ex: df.sort_values(by='pesquisas', ascending=False).head(5).plot(...)
     df["nome"].value_counts().head(5).plot(kind="bar", color="skyblue")
-    plt.title("Top 5 Nomes Mais Comuns")
+    
+    plt.title("Top 5 Nomes Mais Comuns (Por Ocorrência no DB)")
     plt.ylabel("Quantidade")
+    plt.xticks(rotation=45, ha='right') # Melhor leitura de nomes longos
     plt.tight_layout()
-    plt.savefig("static/nomes_comuns.png")
+    plt.savefig(os.path.join(diretorio_static, "nomes_comuns.png")) # Usando os.path.join
     plt.close()
 
+    # ----------------------------------------------------
     # Gráfico 2: Origem
+    # ----------------------------------------------------
     plt.figure(figsize=(5,5))
     df["origem"].value_counts().plot(kind="pie", autopct="%1.1f%%")
     plt.title("Distribuição das Origens")
     plt.tight_layout()
-    plt.savefig("static/origens.png")
+    plt.savefig(os.path.join(diretorio_static, "origens.png")) # Usando os.path.join
     plt.close()
 
+    # ----------------------------------------------------
+    # Renderização do Template
+    # ----------------------------------------------------
     return render_template("estatisticas.html",
                            total=total,
                            mais_comum=mais_comum,
