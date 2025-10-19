@@ -3,15 +3,16 @@
 
 {% block content %}
 <h1>Buscar Nome</h1>
+
 <form method="POST" class="mb-3">
   <div class="input-group">
-    <input type="text" name="termo" class="form-control" placeholder="Digite o nome..." required>
+    <input type="text" name="termo" class="form-control" placeholder="Digite o nome..." value="{{ termo_pesquisado }}" required>
     <button class="btn btn-primary" type="submit">Buscar</button>
   </div>
 </form>
 
 {% if resultados %}
-<table class="table table-striped">
+<table class="table table-striped mt-3">
   <thead>
     <tr>
       <th>Nome</th>
@@ -22,16 +23,21 @@
     </tr>
   </thead>
   <tbody>
-    {% for id, nome, significado, origem, motivo, pesquisas in resultados %}
+    {% for row in resultados %}
     <tr>
-      <td>{{ nome }}</td>
-      <td>{{ significado }}</td>
-      <td>{{ origem }}</td>
-      <td>{{ motivo }}</td>
-      <td>{{ pesquisas }}</td>
+      <td>{{ row.nome }}</td>
+      <td>{{ row.significado }}</td>
+      <td>{{ row.origem }}</td>
+      <td>{{ row.motivo_escolha }}</td>
+      <td>{{ row.pesquisas }}</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
+{% elif termo_pesquisado %}
+<div class="alert alert-warning mt-3">
+    Nenhum resultado encontrado para "{{ termo_pesquisado }}".
+</div>
 {% endif %}
+
 {% endblock %}
